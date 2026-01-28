@@ -39,22 +39,37 @@ export default function UploadPage() {
       <FileUploader clientId={selectedClient} onUploadComplete={handleUploadComplete} />
 
       <div className="bg-muted p-6 rounded-lg">
-        <h3 className="text-lg font-semibold mb-3">Sample Data Format</h3>
+        <h3 className="text-lg font-semibold mb-3">Supported Data Formats</h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          The system supports multiple CSV formats. Your data will be automatically detected and transformed.
+        </p>
 
         <div className="space-y-4">
           <div>
-            <h4 className="text-sm font-medium mb-2">CSV Example:</h4>
+            <h4 className="text-sm font-medium mb-2">Format 1: Standard Format</h4>
             <pre className="bg-background p-3 rounded text-xs overflow-x-auto">
 {`conversation_id,tenant_id,timestamp,role,message,response_time_ms,resolved,satisfaction_score
 conv_001,tenant_123,2024-01-15T10:00:00Z,tenant,"I need help with my account",,,
-conv_001,tenant_123,2024-01-15T10:00:02Z,ai,"I'd be happy to help! What seems to be the issue?",2000,,
-conv_001,tenant_123,2024-01-15T10:01:00Z,tenant,"I can't login",,,
-conv_001,tenant_123,2024-01-15T10:01:03Z,ai,"Let me help you reset your password.",3000,true,4`}
+conv_001,tenant_123,2024-01-15T10:00:02Z,ai,"I'd be happy to help!",2000,,`}
             </pre>
           </div>
 
           <div>
-            <h4 className="text-sm font-medium mb-2">JSON Example:</h4>
+            <h4 className="text-sm font-medium mb-2">Format 2: Alternative Format (Content, MessageType, TimeSent, ConversationId)</h4>
+            <pre className="bg-background p-3 rounded text-xs overflow-x-auto">
+{`Content,MessageType,TimeSent,ConversationId
+"I need help with my account",3,2025-03-24 08:39:41,conv_001
+"I'd be happy to help!",1,2025-03-24 08:39:45,conv_001`}
+            </pre>
+            <p className="text-xs text-muted-foreground mt-2">
+              • MessageType: 1 = AI response, 3 = User message (other types are filtered out)
+              <br />
+              • System messages (type 5, 6) are automatically excluded
+            </p>
+          </div>
+
+          <div>
+            <h4 className="text-sm font-medium mb-2">JSON Format:</h4>
             <pre className="bg-background p-3 rounded text-xs overflow-x-auto">
 {`[
   {
@@ -69,7 +84,7 @@ conv_001,tenant_123,2024-01-15T10:01:03Z,ai,"Let me help you reset your password
     "tenant_id": "tenant_123",
     "timestamp": "2024-01-15T10:00:02Z",
     "role": "ai",
-    "message": "I'd be happy to help! What seems to be the issue?",
+    "message": "I'd be happy to help!",
     "response_time_ms": 2000
   }
 ]`}

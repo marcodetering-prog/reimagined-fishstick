@@ -39,8 +39,12 @@ export async function parseCSVFile(file: File): Promise<ParseResult> {
               return;
             }
 
-            const data = results.data as ChatHistoryRecord[];
-            const validated = validateRecords(data);
+            const rawData = results.data as any[];
+
+            // Detect format and transform if needed
+            const transformedData = detectAndTransformFormat(rawData);
+
+            const validated = validateRecords(transformedData);
 
             if (!validated.success) {
               resolve(validated);
@@ -73,6 +77,88 @@ export async function parseCSVFile(file: File): Promise<ParseResult> {
       error: error instanceof Error ? error.message : 'Failed to read file',
     };
   }
+}
+
+/**
+ * Detect CSV format and transform to standard format
+ * Supports multiple formats:
+ * 1. Standard format: conversation_id, tenant_id, timestamp, role, message
+ * 2. Alternative format: Content, MessageType, TimeSent, ConversationId
+ */
+function detectAndTransformFormat(records: any[]): any[] {
+  if (!records || records.length === 0) return records;
+
+  const firstRecord = records[0];
+  const headers = Object.keys(firstRecord);
+
+  // Check if it's the alternative format (Content, MessageType, TimeSent, ConversationId)
+  const hasContent = headers.includes('content');
+  const hasMessageType = headers.includes('messagetype');
+  const hasTimeSent = headers.includes('timesent');
+  const hasConversationId = headers.includes('conversationid');
+
+  if (hasContent && hasMessageType && hasTimeSent && hasConversationId) {
+    console.log('[CSV Parser] Detected alternative format, transforming...');
+    return transformAlternativeFormat(records);
+  }
+
+  // Already in standard format
+  return records;
+}
+
+/**
+ * Transform alternative format to standard format
+ * Maps: Content → message, MessageType → role, TimeSent → timestamp, ConversationId → conversation_id
+ * MessageType mapping: 1 = ai, 3 = tenant, others = skip
+ */
+function transformAlternativeFormat(records: any[]): any[] {
+  const transformed: any[] = [];
+  let skippedCount = 0;
+
+  for (const record of records) {
+    const messageType = parseInt(record.messagetype);
+
+    // Skip system messages (type 5, 6) and other non-conversation messages
+    if (messageType !== 1 && messageType !== 3) {
+      skippedCount++;
+      continue;
+    }
+
+    // Convert MessageType to role: 1 = ai, 3 = tenant
+    const role = messageType === 1 ? 'ai' : 'tenant';
+
+    // Generate tenant_id from conversation_id (use conversation_id as tenant_id)
+    // In a real scenario, you might want to extract this differently
+    const conversationId = record.conversationid;
+    const tenantId = conversationId; // Using conversation_id as tenant_id for now
+
+    // Parse timestamp - convert from "2025-03-24 08:39:41.3790098" to ISO format
+    let timestamp = record.timesent;
+    try {
+      // Try to parse and convert to ISO format
+      const date = new Date(timestamp);
+      if (!isNaN(date.getTime())) {
+        timestamp = date.toISOString();
+      }
+    } catch (e) {
+      // Keep original if parsing fails
+    }
+
+    transformed.push({
+      conversation_id: conversationId,
+      tenant_id: tenantId,
+      timestamp: timestamp,
+      role: role,
+      message: record.content || '',
+    });
+  }
+
+  if (skippedCount > 0) {
+    console.log(`[CSV Parser] Skipped ${skippedCount} system messages (MessageType 5, 6, etc.)`);
+  }
+
+  console.log(`[CSV Parser] Transformed ${transformed.length} records from alternative format`);
+  return transformed;
 }
 
 export async function parseJSONFile(file: File): Promise<ParseResult> {
