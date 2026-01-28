@@ -19,49 +19,60 @@ export interface ParseResult {
 }
 
 export async function parseCSVFile(file: File): Promise<ParseResult> {
-  return new Promise((resolve) => {
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      transformHeader: (header) => header.toLowerCase().trim().replace(/\s+/g, '_'),
-      complete: (results) => {
-        try {
-          if (results.errors.length > 0) {
+  try {
+    // Read file content as text first (works in Next.js server environment)
+    const text = await file.text();
+
+    return new Promise((resolve) => {
+      // Parse the text string instead of the File object
+      Papa.parse(text, {
+        header: true,
+        skipEmptyLines: true,
+        transformHeader: (header) => header.toLowerCase().trim().replace(/\s+/g, '_'),
+        complete: (results) => {
+          try {
+            if (results.errors.length > 0) {
+              resolve({
+                success: false,
+                error: `CSV parsing errors: ${results.errors.map(e => e.message).join(', ')}`,
+              });
+              return;
+            }
+
+            const data = results.data as ChatHistoryRecord[];
+            const validated = validateRecords(data);
+
+            if (!validated.success) {
+              resolve(validated);
+              return;
+            }
+
+            resolve({
+              success: true,
+              data: validated.data,
+              recordsCount: validated.data?.length || 0,
+            });
+          } catch (error) {
             resolve({
               success: false,
-              error: `CSV parsing errors: ${results.errors.map(e => e.message).join(', ')}`,
+              error: error instanceof Error ? error.message : 'Unknown error during parsing',
             });
-            return;
           }
-
-          const data = results.data as ChatHistoryRecord[];
-          const validated = validateRecords(data);
-
-          if (!validated.success) {
-            resolve(validated);
-            return;
-          }
-
-          resolve({
-            success: true,
-            data: validated.data,
-            recordsCount: validated.data?.length || 0,
-          });
-        } catch (error) {
+        },
+        error: (error) => {
           resolve({
             success: false,
-            error: error instanceof Error ? error.message : 'Unknown error during parsing',
+            error: error.message,
           });
-        }
-      },
-      error: (error) => {
-        resolve({
-          success: false,
-          error: error.message,
-        });
-      },
+        },
+      });
     });
-  });
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to read file',
+    };
+  }
 }
 
 export async function parseJSONFile(file: File): Promise<ParseResult> {
