@@ -1,9 +1,15 @@
-# Railway configuration for persistent storage
+# Railway configuration for persistent storage and optimized deployment
+
+[build]
+builder = "nixpacks"
 
 [deploy]
-startCommand = "npm run start"
+startCommand = "npm start"
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 3
+numReplicas = 1
+healthcheckPath = "/api/health"
+healthcheckTimeout = 100
 
 # Persistent volume for data storage
 [[deploy.volumes]]
