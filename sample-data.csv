@@ -1,0 +1,31 @@
+conversation_id,tenant_id,timestamp,role,message,response_time_ms,resolved,satisfaction_score
+conv_001,tenant_123,2024-01-15T10:00:00Z,tenant,"I can't access my account",,,
+conv_001,tenant_123,2024-01-15T10:00:02Z,ai,"I'd be happy to help you with account access. Can you tell me what error message you're seeing?",2000,,
+conv_001,tenant_123,2024-01-15T10:00:45Z,tenant,"It says invalid password",,,
+conv_001,tenant_123,2024-01-15T10:00:47Z,ai,"I can help you reset your password. I'll send a reset link to your registered email address.",2000,true,4
+conv_002,tenant_456,2024-01-15T11:30:00Z,tenant,"How do I export my data?",,,
+conv_002,tenant_456,2024-01-15T11:30:03Z,ai,"You can export your data by going to Settings > Data Export. Would you like me to walk you through the steps?",3000,,
+conv_002,tenant_456,2024-01-15T11:31:00Z,tenant,"Yes please",,,
+conv_002,tenant_456,2024-01-15T11:31:02Z,ai,"Great! First, click on the Settings icon in the top right corner. Then select 'Data Export' from the menu. You'll see options to export as CSV or JSON.",2000,true,5
+conv_003,tenant_789,2024-01-15T14:00:00Z,tenant,"What are your business hours?",,,
+conv_003,tenant_789,2024-01-15T14:00:01Z,ai,"Our support team is available 24/7 to assist you. Is there anything specific I can help you with?",1000,true,5
+conv_004,tenant_123,2024-01-15T15:00:00Z,tenant,"I need to upgrade my plan",,,
+conv_004,tenant_123,2024-01-15T15:00:03Z,ai,"I can help you upgrade your plan. What features are you looking for?",3000,,
+conv_004,tenant_123,2024-01-15T15:01:00Z,tenant,"I need more storage",,,
+conv_004,tenant_123,2024-01-15T15:01:02Z,ai,"Our Pro plan offers 1TB of storage. Would you like me to upgrade you to that plan?",2000,,
+conv_004,tenant_123,2024-01-15T15:02:00Z,tenant,"Yes please",,,
+conv_004,tenant_123,2024-01-15T15:02:02Z,ai,"Perfect! I've upgraded your account to the Pro plan. You now have 1TB of storage available.",2000,true,5
+conv_005,tenant_234,2024-01-16T09:00:00Z,tenant,"The app is running slow",,,
+conv_005,tenant_234,2024-01-16T09:00:04Z,ai,"I'm sorry to hear that. Let me help you troubleshoot. Are you using the web app or mobile app?",4000,,
+conv_005,tenant_234,2024-01-16T09:01:00Z,tenant,"Web app on Chrome",,,
+conv_005,tenant_234,2024-01-16T09:01:03Z,ai,"Try clearing your browser cache and cookies. Also, make sure you're using the latest version of Chrome.",3000,true,3
+conv_006,tenant_345,2024-01-16T10:30:00Z,tenant,"Can I integrate with Slack?",,,
+conv_006,tenant_345,2024-01-16T10:30:02Z,ai,"Yes! We have a Slack integration available. Go to Settings > Integrations > Slack to connect your workspace.",2000,true,5
+conv_007,tenant_567,2024-01-16T13:00:00Z,tenant,"I was charged twice",,,
+conv_007,tenant_567,2024-01-16T13:00:05Z,ai,"I apologize for the billing issue. Let me check your account. Can you provide the transaction IDs?",5000,,
+conv_007,tenant_567,2024-01-16T13:02:00Z,tenant,"TXN-12345 and TXN-12346",,,
+conv_007,tenant_567,2024-01-16T13:02:04Z,ai,"Thank you. I can see the duplicate charge. I've processed a refund for TXN-12346. You should see it in 3-5 business days.",4000,true,4
+conv_008,tenant_678,2024-01-16T16:00:00Z,tenant,"How do I delete my account?",,,
+conv_008,tenant_678,2024-01-16T16:00:02Z,ai,"I can help with that. Before proceeding, please note that account deletion is permanent. Are you sure you want to continue?",2000,,
+conv_008,tenant_678,2024-01-16T16:01:00Z,tenant,"Never mind, I'll keep it",,,
+conv_008,tenant_678,2024-01-16T16:01:01Z,ai,"Great! I'm glad you're staying with us. Is there anything else I can help you with?",1000,false,4
