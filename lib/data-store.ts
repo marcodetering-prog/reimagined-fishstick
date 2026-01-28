@@ -124,6 +124,16 @@ class DataStore {
     }
   }
 
+  getUploadsByClient(clientId: string): UploadRecord[] {
+    return this.uploads
+      .filter(u => u.clientId === clientId)
+      .sort((a, b) => b.uploadedAt.getTime() - a.uploadedAt.getTime());
+  }
+
+  getAllUploads(): UploadRecord[] {
+    return this.uploads.sort((a, b) => b.uploadedAt.getTime() - a.uploadedAt.getTime());
+  }
+
   // Conversation methods
   addOrUpdateConversation(data: ConversationData): void {
     this.conversations.set(data.conversationId, data);

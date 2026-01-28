@@ -1,19 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { FileUploader } from "@/components/FileUploader";
 import { ClientSelector } from "@/components/ClientSelector";
 import { ClientManager } from "@/components/ClientManager";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
-export default function UploadPage() {
+function UploadPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
 
+  // Pre-select client from URL if provided
+  useEffect(() => {
+    const clientId = searchParams.get('clientId');
+    if (clientId) {
+      setSelectedClient(clientId);
+    }
+  }, [searchParams]);
+
   const handleUploadComplete = () => {
-    // Redirect to dashboard after successful upload
+    // Redirect back to client page or home
+    const clientId = searchParams.get('clientId');
     setTimeout(() => {
-      router.push('/');
+      if (clientId) {
+        router.push(`/clients/${clientId}`);
+      } else {
+        router.push('/');
+      }
     }, 2000);
   };
 
@@ -93,5 +107,13 @@ conv_001,tenant_123,2024-01-15T10:00:02Z,ai,"I'd be happy to help!",2000,,`}
         </div>
       </div>
     </div>
+  );
+}
+
+export default function UploadPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-[400px]"><p>Loading...</p></div>}>
+      <UploadPageContent />
+    </Suspense>
   );
 }

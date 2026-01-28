@@ -1,232 +1,178 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MetricsCard } from "@/components/dashboard/MetricsCard";
-import { UsageChart } from "@/components/dashboard/UsageChart";
-import { PeakHoursChart } from "@/components/dashboard/PeakHoursChart";
-import { ClientSelector } from "@/components/ClientSelector";
-import {
-  Clock,
-  MessageSquare,
-  Users,
-  CheckCircle,
-  Star,
-  TrendingUp,
-  Activity,
-  BarChart3,
-} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Building2, Plus, Calendar, FileText, TrendingUp } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-interface KPIData {
-  avgResponseTimeMs: number | null;
-  avgMessageLength: number | null;
-  avgResponseQuality: number | null;
-  resolutionRate: number | null;
-  avgSatisfaction: number | null;
-  avgConversationDuration: number | null;
-  totalConversations: number;
-  totalMessages: number;
-  activeTenants: number;
-  messagesPerDay: number | null;
-  avgTurnsToResolution: number | null;
-  messagesOverTime: Array<{ date: string; count: number }>;
-  peakHours: Array<{ hour: number; count: number }>;
+interface Client {
+  id: string;
+  name: string;
+  description?: string;
+  color?: string;
+  createdAt: string;
 }
 
-export default function Dashboard() {
-  const [kpis, setKpis] = useState<KPIData | null>(null);
+interface ClientStats {
+  uploadsCount: number;
+  conversationsCount: number;
+  messagesCount: number;
+  lastUploadDate?: string;
+}
+
+export default function ClientsOverview() {
+  const router = useRouter();
+  const [clients, setClients] = useState<Client[]>([]);
+  const [clientStats, setClientStats] = useState<Record<string, ClientStats>>({});
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedClient, setSelectedClient] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchKPIs();
-  }, [selectedClient]);
+    fetchClients();
+  }, []);
 
-  const fetchKPIs = async () => {
+  const fetchClients = async () => {
     try {
       setLoading(true);
-      const url = selectedClient
-        ? `/api/kpis?clientId=${selectedClient}`
-        : "/api/kpis";
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error("Failed to fetch KPIs");
-      }
+      const response = await fetch("/api/clients");
+      if (!response.ok) throw new Error("Failed to fetch clients");
       const data = await response.json();
-      setKpis(data);
-      setError(null);
+      setClients(data.clients);
+
+      // Fetch stats for each client
+      const stats: Record<string, ClientStats> = {};
+      for (const client of data.clients) {
+        const statsResponse = await fetch(`/api/clients/stats?clientId=${client.id}`);
+        if (statsResponse.ok) {
+          const statsData = await statsResponse.json();
+          stats[client.id] = statsData;
+        }
+      }
+      setClientStats(stats);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+      console.error("Error fetching clients:", err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleClientClick = (clientId: string) => {
+    router.push(`/clients/${clientId}`);
+  };
+
+  const handleNewClient = () => {
+    router.push("/upload");
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <Activity className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-muted-foreground">Loading KPIs...</p>
+          <Building2 className="h-8 w-8 animate-pulse mx-auto mb-4 text-primary" />
+          <p className="text-muted-foreground">Loading clients...</p>
         </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <p className="text-destructive mb-4">Error: {error}</p>
-          <button
-            onClick={fetchKPIs}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!kpis) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px]">
-        <BarChart3 className="h-12 w-12 text-muted-foreground mb-4" />
-        <p className="text-muted-foreground mb-4">No data available</p>
-        <a
-          href="/upload"
-          className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-        >
-          Upload Chat History
-        </a>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">AI Performance Dashboard</h2>
-        <p className="text-muted-foreground">
-          Track and analyze AI-tenant interaction metrics
-        </p>
-      </div>
-
-      <div className="bg-accent/30 p-4 rounded-lg">
-        <ClientSelector
-          value={selectedClient}
-          onChange={setSelectedClient}
-          showAllOption={true}
-        />
-      </div>
-
-      {/* Response Metrics */}
-      <div>
-        <h3 className="text-xl font-semibold mb-4">Response Metrics</h3>
-        <div className="grid gap-4 md:grid-cols-3">
-          <MetricsCard
-            title="Avg Response Time"
-            value={kpis.avgResponseTimeMs}
-            unit="ms"
-            icon={Clock}
-            description="Average time for AI to respond"
-          />
-          <MetricsCard
-            title="Avg Message Length"
-            value={kpis.avgMessageLength}
-            unit="chars"
-            icon={MessageSquare}
-            description="Average AI response length"
-          />
-          <MetricsCard
-            title="Response Quality"
-            value={kpis.avgResponseQuality}
-            unit="/ 5"
-            icon={Star}
-            description="Average satisfaction rating"
-          />
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Clients Overview</h2>
+          <p className="text-muted-foreground">
+            Manage your clients and view their AI performance metrics
+          </p>
         </div>
+        <Button onClick={handleNewClient}>
+          <Plus className="h-4 w-4 mr-2" />
+          New Client
+        </Button>
       </div>
 
-      {/* Conversation Metrics */}
-      <div>
-        <h3 className="text-xl font-semibold mb-4">Conversation Metrics</h3>
-        <div className="grid gap-4 md:grid-cols-3">
-          <MetricsCard
-            title="Resolution Rate"
-            value={kpis.resolutionRate}
-            icon={CheckCircle}
-            format="percentage"
-            description="% of conversations resolved"
-          />
-          <MetricsCard
-            title="Avg Satisfaction"
-            value={kpis.avgSatisfaction}
-            unit="/ 5"
-            icon={Star}
-            description="Overall satisfaction score"
-          />
-          <MetricsCard
-            title="Avg Duration"
-            value={kpis.avgConversationDuration}
-            icon={Clock}
-            format="duration"
-            description="Average conversation length"
-          />
+      {clients.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <Building2 className="h-16 w-16 text-muted-foreground mb-4 opacity-50" />
+            <h3 className="text-lg font-semibold mb-2">No clients yet</h3>
+            <p className="text-muted-foreground text-center mb-6 max-w-md">
+              Create your first client to start uploading chat data and analyzing AI performance
+            </p>
+            <Button onClick={handleNewClient}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create First Client
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {clients.map((client) => {
+            const stats = clientStats[client.id] || {
+              uploadsCount: 0,
+              conversationsCount: 0,
+              messagesCount: 0,
+            };
+
+            return (
+              <Card
+                key={client.id}
+                className="cursor-pointer hover:shadow-lg transition-shadow"
+                onClick={() => handleClientClick(client.id)}
+              >
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-10 h-10 rounded-lg flex items-center justify-center"
+                        style={{ backgroundColor: client.color || "#3b82f6" }}
+                      >
+                        <Building2 className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg">{client.name}</CardTitle>
+                        {client.description && (
+                          <CardDescription className="text-sm mt-1">
+                            {client.description}
+                          </CardDescription>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <FileText className="h-4 w-4" />
+                        <span>Uploads</span>
+                      </div>
+                      <span className="font-medium">{stats.uploadsCount}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <TrendingUp className="h-4 w-4" />
+                        <span>Conversations</span>
+                      </div>
+                      <span className="font-medium">{stats.conversationsCount.toLocaleString()}</span>
+                    </div>
+                    {stats.lastUploadDate && (
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Calendar className="h-4 w-4" />
+                          <span>Last Upload</span>
+                        </div>
+                        <span className="font-medium">
+                          {new Date(stats.lastUploadDate).toLocaleDateString()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
-      </div>
-
-      {/* Usage Metrics */}
-      <div>
-        <h3 className="text-xl font-semibold mb-4">Usage Metrics</h3>
-        <div className="grid gap-4 md:grid-cols-4">
-          <MetricsCard
-            title="Total Conversations"
-            value={kpis.totalConversations}
-            icon={MessageSquare}
-            format="number"
-          />
-          <MetricsCard
-            title="Total Messages"
-            value={kpis.totalMessages}
-            icon={Activity}
-            format="number"
-          />
-          <MetricsCard
-            title="Active Tenants"
-            value={kpis.activeTenants}
-            icon={Users}
-            format="number"
-          />
-          <MetricsCard
-            title="Messages/Day"
-            value={kpis.messagesPerDay}
-            icon={TrendingUp}
-            format="number"
-          />
-        </div>
-      </div>
-
-      {/* AI Accuracy Metrics */}
-      <div>
-        <h3 className="text-xl font-semibold mb-4">AI Accuracy Metrics</h3>
-        <div className="grid gap-4 md:grid-cols-2">
-          <MetricsCard
-            title="Avg Turns to Resolution"
-            value={kpis.avgTurnsToResolution}
-            icon={TrendingUp}
-            format="number"
-            description="Average exchanges before resolving"
-          />
-        </div>
-      </div>
-
-      {/* Charts */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <UsageChart data={kpis.messagesOverTime} />
-        <PeakHoursChart data={kpis.peakHours} />
-      </div>
+      )}
     </div>
   );
 }
