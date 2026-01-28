@@ -4,10 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/postgres} prisma generate && next build",
+    "build": "node scripts/build.js",
+    "next:build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/postgres} prisma generate"
+    "postinstall": "node scripts/postinstall.js"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
