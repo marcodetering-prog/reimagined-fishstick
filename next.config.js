@@ -4,6 +4,13 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '10mb',
     },
+    instrumentationHook: true,
+  },
+  // Enable detailed logging in production
+  logging: {
+    fetches: {
+      fullUrl: true,
+    },
   },
 }
 
