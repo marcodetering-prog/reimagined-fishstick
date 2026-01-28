@@ -1,7 +1,9 @@
 /**
- * In-memory data store for CSV data with multi-client support
- * Data persists only during the application runtime
+ * Data store for CSV data with multi-client support
+ * Data is persisted to disk and survives application restarts
  */
+
+import fileStorage from './file-storage';
 
 export interface Client {
   id: string;
@@ -52,6 +54,124 @@ class DataStore {
   private conversations: Map<string, ConversationData> = new Map();
   private uploads: UploadRecord[] = [];
   private allMessages: ChatRecord[] = [];
+  private initialized = false;
+
+  constructor() {
+    // Initialize data from disk (async, but constructor can't be async)
+    this.initializeAsync();
+  }
+
+  /**
+   * Initialize data store by loading from disk
+   */
+  private async initializeAsync(): Promise<void> {
+    if (this.initialized) return;
+
+    try {
+      console.log('[DataStore] Initializing from persistent storage...');
+
+      // Load clients
+      const clientsData = await fileStorage.load<Array<[string, Client]>>('clients.json');
+      if (clientsData) {
+        this.clients = new Map(clientsData.map(([id, client]) => [
+          id,
+          { ...client, createdAt: new Date(client.createdAt) }
+        ]));
+        console.log(`[DataStore] Loaded ${this.clients.size} clients`);
+      }
+
+      // Load conversations
+      const conversationsData = await fileStorage.load<Array<[string, ConversationData]>>('conversations.json');
+      if (conversationsData) {
+        this.conversations = new Map(conversationsData.map(([id, conv]) => [
+          id,
+          {
+            ...conv,
+            startTime: new Date(conv.startTime),
+            endTime: new Date(conv.endTime)
+          }
+        ]));
+        console.log(`[DataStore] Loaded ${this.conversations.size} conversations`);
+      }
+
+      // Load uploads
+      const uploadsData = await fileStorage.load<UploadRecord[]>('uploads.json');
+      if (uploadsData) {
+        this.uploads = uploadsData.map(u => ({
+          ...u,
+          uploadedAt: new Date(u.uploadedAt)
+        }));
+        console.log(`[DataStore] Loaded ${this.uploads.length} uploads`);
+      }
+
+      // Load messages
+      const messagesData = await fileStorage.load<ChatRecord[]>('messages.json');
+      if (messagesData) {
+        this.allMessages = messagesData;
+        console.log(`[DataStore] Loaded ${this.allMessages.length} messages`);
+      }
+
+      this.initialized = true;
+      console.log('[DataStore] ✅ Initialization complete');
+    } catch (error) {
+      console.error('[DataStore] ❌ Initialization failed:', error);
+      this.initialized = true; // Mark as initialized even on error
+    }
+  }
+
+  /**
+   * Wait for initialization to complete
+   */
+  async waitForInitialization(): Promise<void> {
+    // Poll until initialized
+    while (!this.initialized) {
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+  }
+
+  /**
+   * Save clients to disk
+   */
+  private async saveClients(): Promise<void> {
+    try {
+      await fileStorage.save('clients.json', Array.from(this.clients.entries()));
+    } catch (error) {
+      console.error('[DataStore] Failed to save clients:', error);
+    }
+  }
+
+  /**
+   * Save conversations to disk
+   */
+  private async saveConversations(): Promise<void> {
+    try {
+      await fileStorage.save('conversations.json', Array.from(this.conversations.entries()));
+    } catch (error) {
+      console.error('[DataStore] Failed to save conversations:', error);
+    }
+  }
+
+  /**
+   * Save uploads to disk
+   */
+  private async saveUploads(): Promise<void> {
+    try {
+      await fileStorage.save('uploads.json', this.uploads);
+    } catch (error) {
+      console.error('[DataStore] Failed to save uploads:', error);
+    }
+  }
+
+  /**
+   * Save messages to disk
+   */
+  private async saveMessages(): Promise<void> {
+    try {
+      await fileStorage.save('messages.json', this.allMessages);
+    } catch (error) {
+      console.error('[DataStore] Failed to save messages:', error);
+    }
+  }
 
   // Client management methods
   addClient(client: Omit<Client, 'id' | 'createdAt'>): Client {
@@ -62,6 +182,7 @@ class DataStore {
     };
     this.clients.set(newClient.id, newClient);
     console.log('[DataStore] Client created:', newClient.id, newClient.name);
+    this.saveClients(); // Persist to disk
     return newClient;
   }
 
@@ -82,6 +203,7 @@ class DataStore {
     const updated = { ...client, ...updates };
     this.clients.set(id, updated);
     console.log('[DataStore] Client updated:', id);
+    this.saveClients(); // Persist to disk
     return updated;
   }
 
@@ -100,6 +222,12 @@ class DataStore {
       // Delete uploads
       this.uploads = this.uploads.filter(u => u.clientId !== id);
       console.log('[DataStore] Client and associated data deleted:', id);
+
+      // Persist all changes to disk
+      this.saveClients();
+      this.saveConversations();
+      this.saveMessages();
+      this.saveUploads();
     }
     return deleted;
   }
@@ -113,6 +241,7 @@ class DataStore {
     };
     this.uploads.push(record);
     console.log('[DataStore] Upload record created:', record.id);
+    this.saveUploads(); // Persist to disk
     return record;
   }
 
@@ -121,6 +250,7 @@ class DataStore {
     if (index !== -1) {
       this.uploads[index] = { ...this.uploads[index], ...updates };
       console.log('[DataStore] Upload record updated:', id);
+      this.saveUploads(); // Persist to disk
     }
   }
 
@@ -138,6 +268,7 @@ class DataStore {
   addOrUpdateConversation(data: ConversationData): void {
     this.conversations.set(data.conversationId, data);
     console.log('[DataStore] Conversation stored:', data.conversationId);
+    this.saveConversations(); // Persist to disk
   }
 
   getConversation(conversationId: string): ConversationData | undefined {
@@ -163,6 +294,7 @@ class DataStore {
   addMessages(messages: ChatRecord[]): void {
     this.allMessages.push(...messages);
     console.log('[DataStore] Added', messages.length, 'messages. Total:', this.allMessages.length);
+    this.saveMessages(); // Persist to disk
   }
 
   getAllMessages(clientId?: string): ChatRecord[] {
@@ -223,6 +355,12 @@ class DataStore {
     this.uploads = [];
     this.allMessages = [];
     console.log('[DataStore] All data cleared');
+
+    // Persist changes to disk
+    this.saveClients();
+    this.saveConversations();
+    this.saveMessages();
+    this.saveUploads();
   }
 
   clearClientData(clientId: string): void {
@@ -237,6 +375,11 @@ class DataStore {
     // Clear uploads for this client
     this.uploads = this.uploads.filter(u => u.clientId !== clientId);
     console.log('[DataStore] Client data cleared:', clientId);
+
+    // Persist changes to disk
+    this.saveConversations();
+    this.saveMessages();
+    this.saveUploads();
   }
 
   // Helper methods

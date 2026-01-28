@@ -1,0 +1,11 @@
+# Railway configuration for persistent storage
+
+[deploy]
+startCommand = "npm run start"
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
+
+# Persistent volume for data storage
+[[deploy.volumes]]
+mountPath = "/app/.data"
+name = "app-data"

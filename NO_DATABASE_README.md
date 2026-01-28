@@ -2,23 +2,38 @@
 
 ## Overview
 
-This application has been refactored to work **without a PostgreSQL database**. All data is now stored in-memory during the application runtime.
+This application has been refactored to work **without a PostgreSQL database**. All data is now stored in JSON files on disk.
 
 ## How It Works
 
 ### Data Storage
 
-- **In-Memory Storage**: All CSV data is stored in RAM using a TypeScript `DataStore` class
-- **No Persistence**: Data is lost when the application restarts
+- **File-Based Storage**: All CSV data is stored in JSON files in the `.data/` directory
+- **Persistent Storage**: Data survives application restarts and updates
+- **Automatic Save**: Data is automatically saved to disk whenever it changes
 - **No Database Required**: No PostgreSQL, no migrations, no DATABASE_URL needed
+
+**Storage Files:**
+- `.data/clients.json` - Client information
+- `.data/conversations.json` - Conversation data
+- `.data/messages.json` - All messages
+- `.data/uploads.json` - Upload history
 
 ### CSV Upload Flow
 
 1. User uploads CSV file through the web interface
 2. File is parsed and validated
-3. Data is stored in-memory in the `DataStore`
-4. KPIs are calculated from the in-memory data
+3. Data is stored in the `DataStore` and automatically saved to disk
+4. KPIs are calculated from the stored data
 5. Dashboard displays the results
+
+### Data Initialization
+
+On application startup, the `DataStore` automatically:
+1. Checks for existing `.data/` directory
+2. Loads all JSON files (clients, conversations, messages, uploads)
+3. Restores data to in-memory structures
+4. Application is ready with all previous data intact
 
 ### What's Changed
 
@@ -33,9 +48,12 @@ This application has been refactored to work **without a PostgreSQL database**. 
 - ❌ `scripts/postinstall.js` - Prisma generation script
 
 #### Added
-- ✅ `lib/data-store.ts` - In-memory data storage
+- ✅ `lib/data-store.ts` - Persistent data storage with file backend
+- ✅ `lib/file-storage.ts` - File-based storage system
+- ✅ `.data/` directory - JSON file storage (gitignored)
+- ✅ `railway.toml` - Railway volume configuration for persistent storage
 - ✅ Updated API routes to use DataStore
-- ✅ Updated KPI calculator for in-memory data
+- ✅ Updated KPI calculator for stored data
 
 #### Modified
 - 🔄 `app/api/upload/route.ts` - Uses DataStore instead of Prisma
@@ -52,7 +70,7 @@ This application has been refactored to work **without a PostgreSQL database**. 
 
 - ✅ **NO database needed**
 - ✅ Node.js 20+ (automatically provided by Railway)
-- ✅ That's it!
+- ✅ Persistent volume (automatically configured)
 
 ### Steps
 
@@ -62,44 +80,64 @@ This application has been refactored to work **without a PostgreSQL database**. 
    - Click "New Project" → "Deploy from GitHub repo"
    - Select your repository
    - **DO NOT add a database** - it's not needed!
-   - Railway will auto-deploy
+   - Railway will auto-detect `railway.toml` and create a persistent volume
 
-3. **Generate Public URL**:
+3. **Verify Volume Creation**:
+   - Go to your service → "Volumes" tab
+   - You should see a volume named "app-data" mounted at `/app/.data`
+   - This volume persists data across deployments and restarts
+
+4. **Generate Public URL**:
    - Click on your service
    - Go to "Settings" → "Networking"
    - Click "Generate Domain"
 
-4. **That's it!** No database setup, no migrations, no environment variables
+5. **That's it!** No database setup, no migrations, no environment variables
 
-## Important Limitations
+### Persistent Storage on Railway
 
-### ⚠️ Data Persistence
+The `railway.toml` file configures a persistent volume:
+- **Mount Path**: `/app/.data`
+- **Volume Name**: `app-data`
+- **Persists**: Across deployments, restarts, and updates
+- **Backed Up**: Railway automatically backs up volumes
 
-**Data is NOT persistent!** When the application restarts:
-- All uploaded CSV data is lost
-- All conversations are cleared
-- KPIs are reset
+## Data Persistence ✅
 
-**When does Railway restart the app?**
-- Manual restart
-- New deployment
-- Server crash
-- Railway maintenance
-- Free tier inactivity (after 5 minutes of no requests)
+### Data Survives
+
+**Data IS persistent!** Your data persists across:
+- ✅ Application restarts
+- ✅ New deployments
+- ✅ Code updates
+- ✅ Railway service restarts
+- ✅ Server maintenance
+
+**How it works:**
+- All data is saved to JSON files in `.data/` directory
+- On Railway, this directory is mounted as a persistent volume
+- Data is automatically loaded on application startup
+- Changes are saved immediately to disk
 
 ### 💡 Use Cases
 
-This database-free version is suitable for:
-- **Quick analysis** - Upload CSV, view KPIs, done
-- **Demo purposes** - Show the dashboard functionality
-- **Development/testing** - Test without database setup
-- **Temporary analysis** - Don't need to keep the data
+This version is suitable for:
+- ✅ **Production use** - Data persists across deployments
+- ✅ **Long-term storage** - Keep historical data
+- ✅ **Multiple clients** - Manage different clients' data
+- ✅ **Historical tracking** - Analyze trends over time
+- ✅ **Demo purposes** - Show real-world data
 
-This is **NOT suitable** for:
-- Long-term data storage
-- Historical tracking
-- Multiple users expecting data persistence
-- Production use with important data
+### Backup Strategy
+
+**Automatic Railway Backups:**
+- Railway automatically backs up volumes
+- Restore from Railway dashboard if needed
+
+**Manual Backups:**
+- Download `.data/*.json` files from Railway using CLI
+- Keep local backups of important data
+- Export data periodically
 
 ## How to Use
 
