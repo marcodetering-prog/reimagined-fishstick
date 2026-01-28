@@ -1,4 +1,4 @@
-import { prisma } from './db';
+import dataStore, { type ChatRecord, type ConversationData } from './data-store';
 
 export interface KPIData {
   // Response Metrics
@@ -31,52 +31,32 @@ export interface DateRange {
 }
 
 export async function calculateKPIs(dateRange?: DateRange): Promise<KPIData> {
-  const where = dateRange
-    ? {
-        timestamp: {
-          gte: dateRange.startDate,
-          lte: dateRange.endDate,
-        },
-      }
-    : {};
+  // Fetch messages and conversations from data store
+  const messages = dateRange
+    ? dataStore.getMessagesByDateRange(dateRange.startDate, dateRange.endDate)
+    : dataStore.getAllMessages();
 
-  // Fetch all messages in the date range
-  const messages = await prisma.chatMessage.findMany({
-    where,
-    orderBy: { timestamp: 'asc' },
-  });
-
-  // Fetch all conversations in the date range
-  const conversations = await prisma.conversation.findMany({
-    where: dateRange
-      ? {
-          startTime: {
-            gte: dateRange.startDate,
-            lte: dateRange.endDate,
-          },
-        }
-      : {},
-    include: {
-      messages: true,
-    },
-  });
+  const conversations = dateRange
+    ? dataStore.getConversationsByDateRange(dateRange.startDate, dateRange.endDate)
+    : dataStore.getAllConversations();
 
   // Calculate Response Metrics
-  const aiMessages = messages.filter((m) => m.role === 'AI');
+  const aiMessages = messages.filter((m) => m.role.toLowerCase() === 'ai');
 
   const avgResponseTimeMs = aiMessages.length > 0
     ? aiMessages
-        .filter((m) => m.responseTimeMs !== null)
-        .reduce((sum, m) => sum + (m.responseTimeMs || 0), 0) / aiMessages.filter((m) => m.responseTimeMs !== null).length
+        .filter((m) => m.response_time_ms !== null && m.response_time_ms !== undefined)
+        .reduce((sum, m) => sum + (m.response_time_ms || 0), 0) /
+        aiMessages.filter((m) => m.response_time_ms !== null && m.response_time_ms !== undefined).length
     : null;
 
   const avgMessageLength = aiMessages.length > 0
     ? aiMessages.reduce((sum, m) => sum + m.message.length, 0) / aiMessages.length
     : null;
 
-  const messagesWithSatisfaction = aiMessages.filter((m) => m.satisfactionScore !== null);
+  const messagesWithSatisfaction = aiMessages.filter((m) => m.satisfaction_score !== null && m.satisfaction_score !== undefined);
   const avgResponseQuality = messagesWithSatisfaction.length > 0
-    ? messagesWithSatisfaction.reduce((sum, m) => sum + (m.satisfactionScore || 0), 0) / messagesWithSatisfaction.length
+    ? messagesWithSatisfaction.reduce((sum, m) => sum + (m.satisfaction_score || 0), 0) / messagesWithSatisfaction.length
     : null;
 
   // Calculate Conversation Metrics
@@ -98,7 +78,7 @@ export async function calculateKPIs(dateRange?: DateRange): Promise<KPIData> {
   // Calculate Usage Metrics
   const totalConversations = conversations.length;
   const totalMessages = messages.length;
-  const activeTenants = new Set(messages.map((m) => m.tenantId)).size;
+  const activeTenants = new Set(messages.map((m) => m.tenant_id)).size;
 
   // Messages per day
   const dateRangeDays = dateRange
@@ -134,7 +114,7 @@ export async function calculateKPIs(dateRange?: DateRange): Promise<KPIData> {
   };
 }
 
-function calculateMessagesOverTime(messages: any[]): Array<{ date: string; count: number }> {
+function calculateMessagesOverTime(messages: ChatRecord[]): Array<{ date: string; count: number }> {
   const dateCounts = new Map<string, number>();
 
   messages.forEach((message) => {
@@ -147,7 +127,7 @@ function calculateMessagesOverTime(messages: any[]): Array<{ date: string; count
     .sort((a, b) => a.date.localeCompare(b.date));
 }
 
-function calculatePeakHours(messages: any[]): Array<{ hour: number; count: number }> {
+function calculatePeakHours(messages: ChatRecord[]): Array<{ hour: number; count: number }> {
   const hourCounts = new Map<number, number>();
 
   messages.forEach((message) => {
@@ -161,40 +141,7 @@ function calculatePeakHours(messages: any[]): Array<{ hour: number; count: numbe
 }
 
 export async function cacheKPISnapshot(dateRange: DateRange, kpiData: KPIData) {
-  await prisma.kPISnapshot.upsert({
-    where: {
-      startDate_endDate: {
-        startDate: dateRange.startDate,
-        endDate: dateRange.endDate,
-      },
-    },
-    create: {
-      startDate: dateRange.startDate,
-      endDate: dateRange.endDate,
-      avgResponseTimeMs: kpiData.avgResponseTimeMs,
-      avgMessageLength: kpiData.avgMessageLength,
-      avgResponseQuality: kpiData.avgResponseQuality,
-      resolutionRate: kpiData.resolutionRate,
-      avgSatisfaction: kpiData.avgSatisfaction,
-      avgConversationDuration: kpiData.avgConversationDuration,
-      totalConversations: kpiData.totalConversations,
-      totalMessages: kpiData.totalMessages,
-      activeTenants: kpiData.activeTenants,
-      messagesPerDay: kpiData.messagesPerDay,
-      avgTurnsToResolution: kpiData.avgTurnsToResolution,
-    },
-    update: {
-      avgResponseTimeMs: kpiData.avgResponseTimeMs,
-      avgMessageLength: kpiData.avgMessageLength,
-      avgResponseQuality: kpiData.avgResponseQuality,
-      resolutionRate: kpiData.resolutionRate,
-      avgSatisfaction: kpiData.avgSatisfaction,
-      avgConversationDuration: kpiData.avgConversationDuration,
-      totalConversations: kpiData.totalConversations,
-      totalMessages: kpiData.totalMessages,
-      activeTenants: kpiData.activeTenants,
-      messagesPerDay: kpiData.messagesPerDay,
-      avgTurnsToResolution: kpiData.avgTurnsToResolution,
-    },
-  });
+  // No-op for now - we're not caching KPIs in memory
+  // This could be extended to cache in memory if needed
+  console.log('[KPI] Caching skipped in database-free mode');
 }

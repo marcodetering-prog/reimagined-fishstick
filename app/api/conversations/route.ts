@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+import dataStore from '@/lib/data-store';
 
 export async function GET(request: NextRequest) {
   console.log('[API/Conversations] GET request received');
@@ -11,20 +11,17 @@ export async function GET(request: NextRequest) {
 
     console.log('[API/Conversations] Fetching conversations:', { page, limit, skip });
 
-    const [conversations, total] = await Promise.all([
-      prisma.conversation.findMany({
-        take: limit,
-        skip,
-        orderBy: { startTime: 'desc' },
-        include: {
-          messages: {
-            orderBy: { timestamp: 'asc' },
-            take: 5,
-          },
-        },
-      }),
-      prisma.conversation.count(),
-    ]);
+    // Get all conversations and apply pagination
+    const allConversations = dataStore.getAllConversations();
+    const total = allConversations.length;
+
+    // Sort by start time descending
+    const sortedConversations = allConversations.sort((a, b) =>
+      b.startTime.getTime() - a.startTime.getTime()
+    );
+
+    // Paginate
+    const conversations = sortedConversations.slice(skip, skip + limit);
 
     console.log('[API/Conversations] ✅ Fetched', conversations.length, 'conversations out of', total);
 
