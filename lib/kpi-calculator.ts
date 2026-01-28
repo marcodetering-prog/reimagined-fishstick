@@ -30,15 +30,15 @@ export interface DateRange {
   endDate: Date;
 }
 
-export async function calculateKPIs(dateRange?: DateRange): Promise<KPIData> {
+export async function calculateKPIs(dateRange?: DateRange, clientId?: string): Promise<KPIData> {
   // Fetch messages and conversations from data store
   const messages = dateRange
-    ? dataStore.getMessagesByDateRange(dateRange.startDate, dateRange.endDate)
-    : dataStore.getAllMessages();
+    ? dataStore.getMessagesByDateRange(dateRange.startDate, dateRange.endDate, clientId)
+    : dataStore.getAllMessages(clientId);
 
   const conversations = dateRange
-    ? dataStore.getConversationsByDateRange(dateRange.startDate, dateRange.endDate)
-    : dataStore.getAllConversations();
+    ? dataStore.getConversationsByDateRange(dateRange.startDate, dateRange.endDate, clientId)
+    : dataStore.getAllConversations(clientId);
 
   // Calculate Response Metrics
   const aiMessages = messages.filter((m) => m.role.toLowerCase() === 'ai');

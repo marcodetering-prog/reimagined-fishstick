@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { MetricsCard } from "@/components/dashboard/MetricsCard";
 import { UsageChart } from "@/components/dashboard/UsageChart";
 import { PeakHoursChart } from "@/components/dashboard/PeakHoursChart";
+import { ClientSelector } from "@/components/ClientSelector";
 import {
   Clock,
   MessageSquare,
@@ -35,15 +36,19 @@ export default function Dashboard() {
   const [kpis, setKpis] = useState<KPIData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedClient, setSelectedClient] = useState<string | null>(null);
 
   useEffect(() => {
     fetchKPIs();
-  }, []);
+  }, [selectedClient]);
 
   const fetchKPIs = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/kpis");
+      const url = selectedClient
+        ? `/api/kpis?clientId=${selectedClient}`
+        : "/api/kpis";
+      const response = await fetch(url);
       if (!response.ok) {
         throw new Error("Failed to fetch KPIs");
       }
@@ -106,6 +111,14 @@ export default function Dashboard() {
         <p className="text-muted-foreground">
           Track and analyze AI-tenant interaction metrics
         </p>
+      </div>
+
+      <div className="bg-accent/30 p-4 rounded-lg">
+        <ClientSelector
+          value={selectedClient}
+          onChange={setSelectedClient}
+          showAllOption={true}
+        />
       </div>
 
       {/* Response Metrics */}

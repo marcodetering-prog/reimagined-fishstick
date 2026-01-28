@@ -7,6 +7,7 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const startDateStr = searchParams.get('startDate');
     const endDateStr = searchParams.get('endDate');
+    const clientId = searchParams.get('clientId');
 
     let dateRange = undefined;
 
@@ -20,8 +21,12 @@ export async function GET(request: NextRequest) {
       console.log('[API/KPIs] No date range specified, using all data');
     }
 
+    if (clientId) {
+      console.log('[API/KPIs] Filtering by client:', clientId);
+    }
+
     console.log('[API/KPIs] Calculating KPIs...');
-    const kpis = await calculateKPIs(dateRange);
+    const kpis = await calculateKPIs(dateRange, clientId || undefined);
     console.log('[API/KPIs] ✅ KPIs calculated:', {
       totalConversations: kpis.totalConversations,
       totalMessages: kpis.totalMessages,

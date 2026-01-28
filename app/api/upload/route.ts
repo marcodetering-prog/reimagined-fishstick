@@ -8,13 +8,26 @@ export async function POST(request: NextRequest) {
     console.log('[API/Upload] Parsing form data...');
     const formData = await request.formData();
     const file = formData.get('file') as File;
+    const clientId = formData.get('clientId') as string;
 
     if (!file) {
       console.log('[API/Upload] ❌ No file provided');
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    console.log('[API/Upload] File received:', {
+    if (!clientId) {
+      console.log('[API/Upload] ❌ No client ID provided');
+      return NextResponse.json({ error: 'Client ID is required' }, { status: 400 });
+    }
+
+    // Verify client exists
+    const client = dataStore.getClient(clientId);
+    if (!client) {
+      console.log('[API/Upload] ❌ Client not found:', clientId);
+      return NextResponse.json({ error: 'Client not found' }, { status: 404 });
+    }
+
+    console.log('[API/Upload] File received for client:', client.name, {
       name: file.name,
       size: file.size,
       type: file.type
@@ -42,6 +55,11 @@ export async function POST(request: NextRequest) {
     const records = parseResult.data as ChatRecord[];
     console.log('[API/Upload] ✅ File parsed successfully:', records.length, 'records');
 
+    // Associate all records with the client
+    records.forEach(record => {
+      record.clientId = clientId;
+    });
+
     // Record upload history
     console.log('[API/Upload] Creating upload history record...');
     const uploadRecord = dataStore.addUpload({
@@ -49,6 +67,7 @@ export async function POST(request: NextRequest) {
       fileSize: file.size,
       recordsCount: records.length,
       status: 'PROCESSING',
+      clientId,
     });
     console.log('[API/Upload] Upload record created:', uploadRecord.id);
 
@@ -103,6 +122,7 @@ export async function POST(request: NextRequest) {
           satisfactionScore: avgSatisfaction,
           duration,
           messages: convRecords,
+          clientId,
         };
 
         dataStore.addOrUpdateConversation(conversationData);

@@ -6,10 +6,11 @@ import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 
 interface FileUploaderProps {
+  clientId: string | null;
   onUploadComplete?: () => void;
 }
 
-export function FileUploader({ onUploadComplete }: FileUploaderProps) {
+export function FileUploader({ clientId, onUploadComplete }: FileUploaderProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -56,12 +57,21 @@ export function FileUploader({ onUploadComplete }: FileUploaderProps) {
   const handleUpload = async () => {
     if (!file) return;
 
+    if (!clientId) {
+      setUploadResult({
+        success: false,
+        message: 'Please select a client before uploading',
+      });
+      return;
+    }
+
     setUploading(true);
     setUploadResult(null);
 
     try {
       const formData = new FormData();
       formData.append('file', file);
+      formData.append('clientId', clientId);
 
       const response = await fetch('/api/upload', {
         method: 'POST',

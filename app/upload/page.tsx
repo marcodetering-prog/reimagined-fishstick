@@ -1,10 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import { FileUploader } from "@/components/FileUploader";
+import { ClientSelector } from "@/components/ClientSelector";
+import { ClientManager } from "@/components/ClientManager";
 import { useRouter } from "next/navigation";
 
 export default function UploadPage() {
   const router = useRouter();
+  const [selectedClient, setSelectedClient] = useState<string | null>(null);
 
   const handleUploadComplete = () => {
     // Redirect to dashboard after successful upload
@@ -22,7 +26,17 @@ export default function UploadPage() {
         </p>
       </div>
 
-      <FileUploader onUploadComplete={handleUploadComplete} />
+      <ClientManager />
+
+      <div className="bg-accent/30 p-4 rounded-lg">
+        <ClientSelector
+          value={selectedClient}
+          onChange={setSelectedClient}
+          required={true}
+        />
+      </div>
+
+      <FileUploader clientId={selectedClient} onUploadComplete={handleUploadComplete} />
 
       <div className="bg-muted p-6 rounded-lg">
         <h3 className="text-lg font-semibold mb-3">Sample Data Format</h3>

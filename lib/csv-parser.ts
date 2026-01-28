@@ -59,7 +59,7 @@ export async function parseCSVFile(file: File): Promise<ParseResult> {
             });
           }
         },
-        error: (error) => {
+        error: (error: Error) => {
           resolve({
             success: false,
             error: error.message,
