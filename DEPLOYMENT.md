@@ -23,37 +23,34 @@ git push origin main
 
 1. Go to [railway.app](https://railway.app) and sign in
 2. Click **"New Project"**
-3. Select **"Deploy from GitHub repo"**
-4. Choose your repository (reimagined-fishstick)
-5. Railway will detect it as a Next.js project and configure automatically
+3. Select **"Provision PostgreSQL"** (important: add the database first!)
+4. After the PostgreSQL database is created, click **"New"** in your project
+5. Select **"GitHub Repo"**
+6. Choose your repository (reimagined-fishstick)
+7. Railway will detect it as a Next.js project and configure automatically
+8. Railway will automatically connect the database and set the `DATABASE_URL` environment variable
 
-### 3. Add PostgreSQL Database
+**Important:** Add the PostgreSQL database BEFORE deploying your app. The build process requires the DATABASE_URL environment variable to be available.
 
-1. In your Railway project dashboard, click **"New"**
-2. Select **"Database"**
-3. Choose **"Add PostgreSQL"**
-4. Railway will automatically:
-   - Create a PostgreSQL database
-   - Set the `DATABASE_URL` environment variable in your app
-   - Connect the database to your app
-
-### 4. Configure Build Settings (Optional)
+### 3. Configure Build Settings (Optional)
 
 Railway should automatically detect the configuration from `railway.json`, but you can verify:
 
-1. Click on your service
+1. Click on your service (not the database)
 2. Go to **"Settings"**
 3. Under **"Build"**, verify:
-   - **Build Command**: `npm install && npx prisma generate && npm run build`
+   - **Build Command**: `npm install && npm run build`
    - **Start Command**: `npx prisma migrate deploy && npm run start`
 
-### 5. Deploy
+**Note:** The application includes fallback DATABASE_URL values in the build scripts to prevent build failures if the database isn't connected yet. However, the real DATABASE_URL from Railway is required for the app to actually run.
 
-1. Railway will automatically trigger a deployment
+### 4. Deploy
+
+1. Railway will automatically trigger a deployment when you connect the GitHub repo
 2. Watch the build logs to ensure everything deploys successfully
 3. Once deployed, Railway will provide a public URL
 
-### 6. Run Database Migrations
+### 5. Run Database Migrations
 
 The first deployment will automatically run migrations via the start command:
 ```bash
@@ -69,11 +66,12 @@ If you need to run migrations manually:
 npx prisma migrate deploy
 ```
 
-### 7. Access Your App
+### 6. Access Your App
 
-1. In your Railway project dashboard, click on your service
-2. Find the public URL (should look like: `https://your-app.up.railway.app`)
-3. Click the URL to open your deployed application
+1. In your Railway project dashboard, click on your service (the Next.js app)
+2. Go to **"Settings"** → **"Networking"**
+3. Click **"Generate Domain"** if a public URL hasn't been created yet
+4. Click the URL to open your deployed application (should look like: `https://your-app.up.railway.app`)
 
 ## Troubleshooting
 
